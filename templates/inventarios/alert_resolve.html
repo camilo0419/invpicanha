@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Atender alerta</h1><p>{{ alert.title }}</p></div></div><div class="note">{{ alert.message }}</div><form method="post" class="form-card">{% csrf_token %}{{ form.as_p }}<button class="btn primary">Marcar como atendida</button></form>{% endblock %}
