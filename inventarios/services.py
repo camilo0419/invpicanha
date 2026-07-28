@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -60,11 +62,11 @@ def create_inventory(user, inventory_type):
     )
     if existing:
         return existing, False
-    products = Product.objects.filter(active=True)
+    products = Product.objects.filter(activo=True)
     products = (
-        products.filter(include_daily=True)
+        products.filter(incluir_inventario_diario=True)
         if inventory_type == Inventory.DAILY
-        else products.filter(include_general=True)
+        else products.filter(incluir_inventario_general=True)
     )
     try:
         with transaction.atomic():
@@ -84,7 +86,7 @@ def create_inventory(user, inventory_type):
                         product_code=product.code,
                         product_name=product.name,
                         category=product.category,
-                        unit=product.unit,
+                        unit=product.unidad_medida,
                         critical_applied=product.critical_qty,
                         minimum_applied=product.minimum_qty,
                         maximum_applied=product.maximum_qty,
@@ -169,7 +171,19 @@ def finalize_inventory(inventory, user):
     errors = validate_finalization(items)
     if errors:
         raise ValueError("\n".join(errors))
-    InventoryItem.objects.bulk_update(items, ["result", "updated_at"])
+    for item in items:
+        item.valor_unitario_aplicado = item.product.valor_unitario_promedio
+        item.valor_total_estimado = (
+            (item.quantity * item.valor_unitario_aplicado).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            if item.quantity is not None and item.valor_unitario_aplicado is not None
+            else None
+        )
+    InventoryItem.objects.bulk_update(
+        items,
+        ["result", "valor_unitario_aplicado", "valor_total_estimado", "updated_at"],
+    )
     counts = {
         result: sum(item.result == result for item in items)
         for result in [

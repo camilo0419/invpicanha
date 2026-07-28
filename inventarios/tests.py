@@ -1,12 +1,16 @@
 from decimal import Decimal
+from io import StringIO
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.db import connection
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from .models import Alert, AuditLog, Inventory, InventoryItem, PointOfSale, Product, Profile
+from .management.commands.cargar_catalogo_picanha import normalize_unit, stable_code
 from .services import classify_quantity, create_inventory, finalize_inventory
 
 
@@ -32,10 +36,10 @@ class InventoryTestBase(TestCase):
             code="D-001",
             name="Producto diario",
             category="Pruebas",
-            unit="Unidad",
-            include_daily=True,
-            include_general=True,
-            allows_decimals=False,
+            unidad_medida=Product.UNIT_UND,
+            incluir_inventario_diario=True,
+            incluir_inventario_general=True,
+            permite_decimales=False,
             critical_qty=2,
             minimum_qty=5,
             maximum_qty=10,
@@ -46,9 +50,9 @@ class InventoryTestBase(TestCase):
             code="G-001",
             name="Producto general",
             category="Pruebas",
-            unit="Kg",
-            include_daily=False,
-            include_general=True,
+            unidad_medida=Product.UNIT_KG,
+            incluir_inventario_diario=False,
+            incluir_inventario_general=True,
             critical_qty=1,
             minimum_qty=3,
             maximum_qty=8,
@@ -98,6 +102,12 @@ class AuthenticationAndPermissionTests(InventoryTestBase):
         for url in [reverse("products"), reverse("alerts"), reverse("audit"), reverse("settings")]:
             self.assertEqual(self.client.get(url).status_code, 200)
 
+    def test_admin_dashboard_uses_current_product_schema(self):
+        self.login_admin()
+        response = self.client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Operación de inventarios")
+
     def test_idor_protection_between_points(self):
         inventory, _ = create_inventory(self.other_pos, Inventory.DAILY)
         self.login_pos()
@@ -141,7 +151,7 @@ class ClassificationTests(InventoryTestBase):
 
     def test_product_rejects_inconsistent_limits(self):
         product = Product(
-            code="BAD", name="Inválido", unit="Unidad", critical_qty=6, minimum_qty=5
+            code="BAD", name="Inválido", unidad_medida=Product.UNIT_UND, critical_qty=6, minimum_qty=5
         )
         with self.assertRaises(ValidationError):
             product.full_clean()
@@ -209,6 +219,18 @@ class InventoryFlowTests(InventoryTestBase):
         self.assertEqual(inventory.state, Inventory.FINAL_ALERT)
         self.assertEqual(inventory.total_critical, 1)
         self.assertEqual(inventory.alerts.filter(alert_type=Alert.PRODUCT_CRITICAL).count(), 1)
+
+    def test_finalize_snapshots_current_cost_and_calculates_estimated_total(self):
+        self.daily_product.valor_unitario_promedio = Decimal("1250.50")
+        self.daily_product.save(update_fields=["valor_unitario_promedio"])
+        inventory, _ = create_inventory(self.pos, Inventory.DAILY)
+        item = inventory.items.get()
+        item.quantity = Decimal("5")
+        item.save()
+        finalize_inventory(inventory, self.pos)
+        item.refresh_from_db()
+        self.assertEqual(item.valor_unitario_aplicado, Decimal("1250.50"))
+        self.assertEqual(item.valor_total_estimado, Decimal("6252.50"))
 
     def test_pos_cannot_modify_finalized_inventory(self):
         inventory, _ = create_inventory(self.pos, Inventory.DAILY)
@@ -297,20 +319,20 @@ class AdministrationTests(InventoryTestBase):
                 "code": "NEW",
                 "name": "Nuevo",
                 "category": "Cat",
-                "unit": "Unidad",
+                "unidad_medida": Product.UNIT_UND,
                 "display_order": 5,
                 "critical_qty": 1,
                 "minimum_qty": 2,
                 "maximum_qty": 3,
-                "active": "on",
-                "include_general": "on",
+                "activo": "on",
+                "incluir_inventario_general": "on",
             },
         )
         self.assertRedirects(response, reverse("products"))
         product = Product.objects.get(code="NEW")
         self.client.post(reverse("product_toggle", args=[product.pk]))
         product.refresh_from_db()
-        self.assertFalse(product.active)
+        self.assertFalse(product.activo)
         self.assertTrue(AuditLog.objects.filter(action="DESACTIVAR_PRODUCTO").exists())
 
     def test_alert_attention_requires_comment_and_is_audited(self):
@@ -350,3 +372,140 @@ class AdministrationTests(InventoryTestBase):
         call_command("seed_initial_data", verbosity=0)
         self.assertEqual(PointOfSale.objects.filter(code="CENTRAL").count(), 1)
         self.assertEqual(get_user_model().objects.filter(username="contacto@picanhaparrilla.com").count(), 1)
+
+
+class CatalogCommandTests(TestCase):
+    def run_catalog(self):
+        output = StringIO()
+        call_command("cargar_catalogo_picanha", stdout=output)
+        return output.getvalue()
+
+    def test_command_is_idempotent_and_does_not_duplicate_products(self):
+        self.run_catalog()
+        first_count = Product.objects.count()
+        self.run_catalog()
+        self.assertEqual(Product.objects.count(), first_count)
+        self.assertEqual(
+            Product.objects.filter(code=stable_code("Aceite en Galon", "Abarrotes")).count(),
+            1,
+        )
+
+    def test_product_model_and_sqlite_use_the_same_spanish_columns(self):
+        database_columns = {
+            column.name
+            for column in connection.introspection.get_table_description(
+                connection.cursor(), Product._meta.db_table
+            )
+        }
+        expected = {
+            "activo",
+            "permite_decimales",
+            "incluir_inventario_diario",
+            "incluir_inventario_general",
+            "unidad_medida",
+            "valor_unitario_promedio",
+            "observacion_costo",
+        }
+        legacy = {
+            "active",
+            "allows_decimals",
+            "include_daily",
+            "include_general",
+            "unit",
+            "average_unit_value",
+        }
+        self.assertTrue(expected <= database_columns)
+        self.assertTrue(expected <= {field.name for field in Product._meta.fields})
+        self.assertFalse(legacy & database_columns)
+        self.assertFalse(legacy & {field.name for field in Product._meta.fields})
+
+    def test_shared_and_exclusive_membership(self):
+        self.run_catalog()
+        shared = Product.objects.get(code=stable_code("Pasta de Tomate Kl", "Abarrotes"))
+        daily_only = Product.objects.get(code=stable_code("AGUA SABOR", "SIN LICOR"))
+        general_only = Product.objects.get(code=stable_code("Aceite en Galon", "Abarrotes"))
+        self.assertTrue(shared.incluir_inventario_diario)
+        self.assertTrue(shared.incluir_inventario_general)
+        self.assertTrue(daily_only.incluir_inventario_diario)
+        self.assertFalse(daily_only.incluir_inventario_general)
+        self.assertFalse(general_only.incluir_inventario_diario)
+        self.assertTrue(general_only.incluir_inventario_general)
+
+        point, _ = PointOfSale.objects.update_or_create(
+            code="CENTRAL", defaults={"name": "La Central"}
+        )
+        user = get_user_model().objects.create_user("catalog@example.com", password="Test123!")
+        Profile.objects.create(user=user, role=Profile.POS, point=point)
+        daily_inventory, _ = create_inventory(user, Inventory.DAILY)
+        general_inventory, _ = create_inventory(user, Inventory.GENERAL)
+        daily_codes = set(daily_inventory.items.values_list("product_code", flat=True))
+        general_codes = set(general_inventory.items.values_list("product_code", flat=True))
+        self.assertIn(shared.code, daily_codes)
+        self.assertIn(shared.code, general_codes)
+        self.assertIn(daily_only.code, daily_codes)
+        self.assertNotIn(daily_only.code, general_codes)
+        self.assertNotIn(general_only.code, daily_codes)
+        self.assertIn(general_only.code, general_codes)
+
+    def test_null_costs_and_no_compran_are_preserved(self):
+        self.run_catalog()
+        blank_cost = Product.objects.get(code=stable_code("Arepa Peq Und", "Abarrotes"))
+        no_purchase = Product.objects.get(
+            code=stable_code("Salsa Tomate Shefrut", "Abarrotes")
+        )
+        self.assertIsNone(blank_cost.valor_unitario_promedio)
+        self.assertIsNone(no_purchase.valor_unitario_promedio)
+        self.assertEqual(no_purchase.observacion_costo, "NO COMPRAN")
+
+    def test_units_are_normalized_and_numeric_unit_is_not_stored(self):
+        self.run_catalog()
+        self.assertEqual(
+            Product.objects.get(
+                code=stable_code("Arroz Blanco Kl", "Abarrotes")
+            ).unidad_medida,
+            Product.UNIT_KG,
+        )
+        self.assertEqual(
+            Product.objects.get(
+                code=stable_code("CLUB COLOMBIA", "CERVEZA")
+            ).unidad_medida,
+            Product.UNIT_UND,
+        )
+        self.assertEqual(
+            Product.objects.get(
+                code=stable_code("Aceite en Galon", "Abarrotes")
+            ).unidad_medida,
+            Product.UNIT_GALON,
+        )
+        self.assertEqual(normalize_unit("24", "Gaseosa"), Product.UNIT_UND)
+        self.assertEqual(normalize_unit("30", "Cerveza Pilsen"), Product.UNIT_UND)
+        self.assertNotIn(
+            "24", Product.objects.values_list("unidad_medida", flat=True)
+        )
+
+    def test_manual_rules_are_not_overwritten(self):
+        code = stable_code("Pasta de Tomate Kl", "Abarrotes")
+        Product.objects.create(
+            code=code,
+            name="Pasta de Tomate Kl",
+            unidad_medida=Product.UNIT_KG,
+            critical_qty=Decimal("7"),
+            minimum_qty=Decimal("11"),
+            maximum_qty=Decimal("19"),
+            require_observation_low=False,
+            require_observation_high=False,
+        )
+        self.run_catalog()
+        product = Product.objects.get(code=code)
+        self.assertEqual(product.critical_qty, Decimal("7"))
+        self.assertEqual(product.minimum_qty, Decimal("11"))
+        self.assertEqual(product.maximum_qty, Decimal("19"))
+        self.assertFalse(product.require_observation_low)
+        self.assertFalse(product.require_observation_high)
+
+    def test_general_cost_wins_and_command_prints_warning(self):
+        output = self.run_catalog()
+        product = Product.objects.get(code=stable_code("Camaron Kl", "Proteina"))
+        self.assertEqual(product.valor_unitario_promedio, Decimal("34000"))
+        self.assertIn("ADVERTENCIA", output)
+        self.assertIn("se conserva el costo general", output)

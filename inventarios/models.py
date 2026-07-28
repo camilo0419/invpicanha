@@ -83,12 +83,46 @@ class Product(models.Model):
     name = models.CharField("nombre", max_length=120)
     code = models.CharField("código", max_length=30, unique=True)
     category = models.CharField("categoría", max_length=80, blank=True)
-    unit = models.CharField("unidad de medida", max_length=30)
-    active = models.BooleanField("activo", default=True)
+    UNIT_KG = "KG"
+    UNIT_UND = "UND"
+    UNIT_LITRO = "LITRO"
+    UNIT_BOLSA = "BOLSA"
+    UNIT_PORCION = "PORCION"
+    UNIT_GALON = "GALON"
+    UNIT_OTHER = "OTRA"
+    UNITS = [
+        (UNIT_KG, "Kilogramo"),
+        (UNIT_UND, "Unidad"),
+        (UNIT_LITRO, "Litro"),
+        (UNIT_BOLSA, "Bolsa"),
+        (UNIT_PORCION, "Porción"),
+        (UNIT_GALON, "Galón"),
+        (UNIT_OTHER, "Otra"),
+    ]
+
+    unidad_medida = models.CharField(
+        "unidad de medida", max_length=10, choices=UNITS, default=UNIT_OTHER
+    )
+    activo = models.BooleanField("activo", default=True)
     display_order = models.PositiveIntegerField("orden visual", default=100)
-    allows_decimals = models.BooleanField("permite decimales", default=True)
-    include_daily = models.BooleanField("incluir en inventario diario", default=False)
-    include_general = models.BooleanField("incluir en inventario general", default=True)
+    permite_decimales = models.BooleanField("permite decimales", default=True)
+    incluir_inventario_diario = models.BooleanField(
+        "incluir en inventario diario", default=False
+    )
+    incluir_inventario_general = models.BooleanField(
+        "incluir en inventario general", default=True
+    )
+    valor_unitario_promedio = models.DecimalField(
+        "valor unitario promedio",
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+    )
+    observacion_costo = models.CharField(
+        "observación de costo", max_length=250, blank=True
+    )
     critical_qty = models.DecimalField(
         "cantidad crítica",
         max_digits=12,
@@ -288,6 +322,12 @@ class InventoryItem(models.Model):
     )
     maximum_applied = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    valor_unitario_aplicado = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    valor_total_estimado = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True
     )
     require_observation_low_applied = models.BooleanField(default=True)
     require_observation_high_applied = models.BooleanField(default=True)

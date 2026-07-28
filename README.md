@@ -11,6 +11,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py seed_initial_data
+python manage.py cargar_catalogo_picanha
 python manage.py test
 python manage.py runserver
 ```
@@ -34,6 +35,15 @@ python manage.py changepassword contacto@picanhaparrilla.com
 ## Datos iniciales
 
 El comando `seed_initial_data` es idempotente: crea o actualiza el punto `CENTRAL`, los dos usuarios funcionales, su perfil y un catálogo de ejemplo sin duplicar registros.
+
+El comando `cargar_catalogo_picanha` consolida las listas general y diaria en la
+única tabla de productos. Normaliza unidades, conserva costos desconocidos como
+`NULL`, advierte diferencias entre las dos fuentes y no sobrescribe umbrales ni
+reglas de observación configuradas por el administrador. También es idempotente:
+
+```powershell
+python manage.py cargar_catalogo_picanha
+```
 
 ## Funcionalidad
 

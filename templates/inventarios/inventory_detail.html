@@ -37,13 +37,13 @@
   <a href="?result=ALTO">Altos</a><a href="?result=NORMAL">Normales</a><a href="?result=SIN_REGLA">Sin regla</a>
 </div>
 <div class="detail-table inventory-detail">
-  <div class="tr header"><span>Producto</span><span>Cantidad</span><span>Resultado</span><span>Reglas aplicadas</span><span>Registro</span></div>
+  <div class="tr header"><span>Producto</span><span>Cantidad</span><span>Resultado</span><span>Reglas y costo</span><span>Registro</span></div>
   {% for item in items %}
   <div class="tr">
     <span data-label="Producto"><b>{{ item.product_name }}</b><small>{{ item.product_code }} · {{ item.category }} · {{ item.unit }}</small></span>
     <span data-label="Cantidad">{{ item.quantity|default_if_none:"—" }} {{ item.unit }}</span>
     <span data-label="Resultado"><i class="result {{ item.result|lower }}">{{ item.get_result_display }}</i></span>
-    <span data-label="Reglas"><small>C: {{ item.critical_applied|default_if_none:"—" }} · Mín: {{ item.minimum_applied|default_if_none:"—" }} · Máx: {{ item.maximum_applied|default_if_none:"—" }}</small></span>
+    <span data-label="Reglas y costo"><small>C: {{ item.critical_applied|default_if_none:"—" }} · Mín: {{ item.minimum_applied|default_if_none:"—" }} · Máx: {{ item.maximum_applied|default_if_none:"—" }}<br>Unitario: ${{ item.valor_unitario_aplicado|default_if_none:"—" }} · Total: ${{ item.valor_total_estimado|default_if_none:"—" }}</small></span>
     <span data-label="Registro"><small>{{ item.observation|default:"Sin observación" }}<br>{% if item.registered_by %}{{ item.registered_by.username }} · {{ item.registered_at|date:"d/m/Y H:i" }}{% endif %}</small></span>
   </div>
   {% empty %}<div class="empty">No hay resultados para este filtro.</div>{% endfor %}

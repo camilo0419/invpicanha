@@ -7,20 +7,20 @@
 </div>
 <form class="filters products-filter">
   <input name="q" value="{{ q }}" placeholder="Código, producto o categoría">
-  <select name="status"><option value="">Activos e inactivos</option><option value="active" {% if request.GET.status == "active" %}selected{% endif %}>Activos</option><option value="inactive" {% if request.GET.status == "inactive" %}selected{% endif %}>Inactivos</option></select>
-  <select name="inventory"><option value="">Todos los inventarios</option><option value="daily" {% if request.GET.inventory == "daily" %}selected{% endif %}>Diario</option><option value="general" {% if request.GET.inventory == "general" %}selected{% endif %}>General</option></select>
-  <select name="order"><option value="display_order">Orden visual</option><option value="name">Nombre</option><option value="code">Código</option><option value="category">Categoría</option><option value="-updated_at">Más recientes</option></select>
+  <select name="estado"><option value="">Activos e inactivos</option><option value="activo" {% if request.GET.estado == "activo" %}selected{% endif %}>Activos</option><option value="inactivo" {% if request.GET.estado == "inactivo" %}selected{% endif %}>Inactivos</option></select>
+  <select name="inventario"><option value="">Todos los inventarios</option><option value="diario" {% if request.GET.inventario == "diario" %}selected{% endif %}>Diario</option><option value="general" {% if request.GET.inventario == "general" %}selected{% endif %}>General</option></select>
+  <select name="orden"><option value="display_order">Orden visual</option><option value="name">Nombre</option><option value="code">Código</option><option value="category">Categoría</option><option value="-updated_at">Más recientes</option></select>
   <button class="btn" type="submit">Filtrar</button>
 </form>
 <div class="detail-table products-table">
   <div class="tr header"><span>Producto</span><span>Inventarios</span><span>Reglas</span><span>Estado</span><span>Acciones</span></div>
   {% for product in products %}
   <div class="tr">
-    <span data-label="Producto"><b>{{ product.name }}</b><small>{{ product.code }} · {{ product.category }} · {{ product.unit }}</small></span>
-    <span data-label="Inventarios">{% if product.include_daily %}<i class="tag">Diario</i>{% endif %}{% if product.include_general %}<i class="tag">General</i>{% endif %}</span>
+    <span data-label="Producto"><b>{{ product.name }}</b><small>{{ product.code }} · {{ product.category }} · {{ product.unidad_medida }}</small></span>
+    <span data-label="Inventarios">{% if product.incluir_inventario_diario %}<i class="tag">Diario</i>{% endif %}{% if product.incluir_inventario_general %}<i class="tag">General</i>{% endif %}</span>
     <span data-label="Reglas"><small>C: {{ product.critical_qty|default_if_none:"—" }} · Mín: {{ product.minimum_qty|default_if_none:"—" }} · Máx: {{ product.maximum_qty|default_if_none:"—" }}</small></span>
-    <span data-label="Estado"><i class="status {% if product.active %}finalizado{% else %}anulado{% endif %}">{% if product.active %}Activo{% else %}Inactivo{% endif %}</i></span>
-    <span class="row-actions" data-label="Acciones"><a href="{% url 'product_edit' product.pk %}">Editar</a><form method="post" action="{% url 'product_toggle' product.pk %}">{% csrf_token %}<button class="text-button" type="submit">{% if product.active %}Desactivar{% else %}Activar{% endif %}</button></form></span>
+    <span data-label="Estado"><i class="status {% if product.activo %}finalizado{% else %}anulado{% endif %}">{% if product.activo %}Activo{% else %}Inactivo{% endif %}</i></span>
+    <span class="row-actions" data-label="Acciones"><a href="{% url 'product_edit' product.pk %}">Editar</a><form method="post" action="{% url 'product_toggle' product.pk %}">{% csrf_token %}<button class="text-button" type="submit">{% if product.activo %}Desactivar{% else %}Activar{% endif %}</button></form></span>
   </div>
   {% empty %}<div class="empty">No hay productos para estos filtros.</div>{% endfor %}
 </div>

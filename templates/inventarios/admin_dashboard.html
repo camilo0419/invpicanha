@@ -15,7 +15,7 @@
   <a href="{% url 'inventory_list' %}"><b>{{ inventories_today }}</b><span>Inventarios hoy</span></a>
   <a href="{% url 'inventory_list' %}?state=BORRADOR"><b>{{ drafts }}</b><span>Borradores abiertos</span></a>
   <a href="{% url 'alerts' %}?level=CRITICA&state=PENDIENTE"><b>{{ critical_alerts }}</b><span>Alertas críticas</span></a>
-  <a href="{% url 'products' %}?status=active"><b>{{ active_products }}</b><span>Productos activos</span></a>
+  <a href="{% url 'products' %}?estado=activo"><b>{{ productos_activos }}</b><span>Productos activos</span></a>
 </section>
 
 <div class="quick-actions" aria-label="Accesos rápidos">

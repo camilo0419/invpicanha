@@ -44,7 +44,7 @@
         <div class="quantity-field">
           <label for="qty-{{ item.id }}">Cantidad</label>
           <div class="input-unit">
-            <input id="qty-{{ item.id }}" class="quantity-input" inputmode="{% if item.product.allows_decimals %}decimal{% else %}numeric{% endif %}" name="qty_{{ item.id }}" value="{% if item.quantity != None %}{{ item.quantity }}{% endif %}" placeholder="Vacío" autocomplete="off">
+            <input id="qty-{{ item.id }}" class="quantity-input" inputmode="{% if item.product.permite_decimales %}decimal{% else %}numeric{% endif %}" name="qty_{{ item.id }}" value="{% if item.quantity != None %}{{ item.quantity }}{% endif %}" placeholder="Vacío" autocomplete="off">
             <span>{{ item.unit }}</span>
           </div>
         </div>

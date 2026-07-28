@@ -94,7 +94,7 @@ def dashboard(request):
             "critical_alerts": Alert.objects.filter(attended=False, level=Alert.CRITICAL).count(),
             "high_alerts": Alert.objects.filter(attended=False, alert_type=Alert.PRODUCT_HIGH).count(),
             "low_alerts": Alert.objects.filter(attended=False, alert_type=Alert.PRODUCT_LOW).count(),
-            "active_products": Product.objects.filter(active=True).count(),
+            "productos_activos": Product.objects.filter(activo=True).count(),
             "daily_pending": PointOfSale.objects.filter(active=True).exclude(
                 inventories__inventory_date=today,
                 inventories__inventory_type=Inventory.DAILY,
@@ -174,7 +174,7 @@ def _parse_items(request, inventory, items):
             continue
         if (
             quantity is not None
-            and not item.product.allows_decimals
+            and not item.product.permite_decimales
             and quantity != quantity.to_integral_value()
         ):
             errors.append(f"{item.product_name}: solo admite cantidades enteras.")
@@ -317,15 +317,15 @@ def products(request):
         queryset = queryset.filter(
             Q(name__icontains=query) | Q(code__icontains=query) | Q(category__icontains=query)
         )
-    status = request.GET.get("status")
-    if status in {"active", "inactive"}:
-        queryset = queryset.filter(active=status == "active")
-    inventory_type = request.GET.get("inventory")
-    if inventory_type == "daily":
-        queryset = queryset.filter(include_daily=True)
+    estado = request.GET.get("estado")
+    if estado in {"activo", "inactivo"}:
+        queryset = queryset.filter(activo=estado == "activo")
+    inventory_type = request.GET.get("inventario")
+    if inventory_type == "diario":
+        queryset = queryset.filter(incluir_inventario_diario=True)
     elif inventory_type == "general":
-        queryset = queryset.filter(include_general=True)
-    order = request.GET.get("order", "display_order")
+        queryset = queryset.filter(incluir_inventario_general=True)
+    order = request.GET.get("orden", "display_order")
     allowed_orders = {"display_order", "name", "code", "category", "-updated_at"}
     queryset = queryset.order_by(order if order in allowed_orders else "display_order")
     return render(request, "inventarios/products.html", {"products": queryset, "q": query})
@@ -354,10 +354,10 @@ def product_form(request, pk=None):
 @role_required(Profile.ADMIN)
 def product_toggle(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    product.active = not product.active
-    product.save(update_fields=["active", "updated_at"])
-    action = "ACTIVAR_PRODUCTO" if product.active else "DESACTIVAR_PRODUCTO"
-    audit(request, action, product, f"{product.get_active_display() if hasattr(product, 'get_active_display') else action}.")
+    product.activo = not product.activo
+    product.save(update_fields=["activo", "updated_at"])
+    action = "ACTIVAR_PRODUCTO" if product.activo else "DESACTIVAR_PRODUCTO"
+    audit(request, action, product, action)
     messages.success(request, "Estado del producto actualizado.")
     return redirect("products")
 
