@@ -1,1 +1,55 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Panel administrativo</h1><p>Seguimiento de inventarios, novedades y cumplimiento.</p></div><div class="head-actions"><a class="btn" href="{% url 'inventory_start' 'diario' %}">Nuevo diario</a><a class="btn primary" href="{% url 'inventory_start' 'general' %}">Nuevo general</a></div></div><div class="kpis"><div><b>{{ today_inv|length }}</b><span>Inventarios hoy</span></div><div><b>{{ open_alert_count|default:0 }}</b><span>Alertas abiertas</span></div><div><b>{{ recent|length }}</b><span>Registros recientes</span></div></div><div class="two-col"><section><h2>Inventarios recientes</h2>{% include 'inventarios/_inventory_cards.html' with inventories=recent %}</section><section><h2>Alertas pendientes</h2>{% for a in alerts %}<a class="alert-card {{ a.level|lower }}" href="{% url 'alert_resolve' a.pk %}"><b>{{ a.title }}</b><span>{{ a.message }}</span><small>{{ a.created_at|date:'d/m/Y H:i' }}</small></a>{% empty %}<div class="empty">No hay alertas pendientes.</div>{% endfor %}</section></div>{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Panel administrativo | Picanha Parrilla{% endblock %}
+{% block content %}
+<div class="hero">
+  <div>
+    <span class="eyebrow">Administración funcional</span>
+    <h1>Operación de inventarios</h1>
+    <p>Resumen de cumplimiento, novedades y acciones de hoy.</p>
+  </div>
+  <img src="{% static 'img/logo.png' %}" alt="" class="hero-logo">
+</div>
+
+<section class="kpis" aria-label="Indicadores">
+  <a href="{% url 'inventory_list' %}"><b>{{ inventories_today }}</b><span>Inventarios hoy</span></a>
+  <a href="{% url 'inventory_list' %}?state=BORRADOR"><b>{{ drafts }}</b><span>Borradores abiertos</span></a>
+  <a href="{% url 'alerts' %}?level=CRITICA&state=PENDIENTE"><b>{{ critical_alerts }}</b><span>Alertas críticas</span></a>
+  <a href="{% url 'products' %}?status=active"><b>{{ active_products }}</b><span>Productos activos</span></a>
+</section>
+
+<div class="quick-actions" aria-label="Accesos rápidos">
+  <a href="{% url 'products' %}">Productos</a>
+  <a href="{% url 'inventory_list' %}">Inventarios</a>
+  <a href="{% url 'alerts' %}">Alertas</a>
+  <a href="{% url 'audit' %}">Auditoría</a>
+  <a href="{% url 'settings' %}">Configuración</a>
+</div>
+
+<section class="secondary-kpis">
+  <div><span>Diarios pendientes hoy</span><b>{{ daily_pending }}</b></div>
+  <div><span>Generales pendientes hoy</span><b>{{ general_pending }}</b></div>
+  <div><span>Productos bajos pendientes</span><b>{{ low_alerts }}</b></div>
+  <div><span>Productos altos pendientes</span><b>{{ high_alerts }}</b></div>
+</section>
+
+<div class="two-col">
+  <section>
+    <div class="section-head"><h2>Últimos inventarios</h2><a href="{% url 'inventory_list' %}">Ver todos</a></div>
+    {% include "inventarios/_inventory_cards.html" with inventories=recent %}
+  </section>
+  <section>
+    <div class="section-head"><h2>Alertas recientes</h2><a href="{% url 'alerts' %}">Abrir bandeja</a></div>
+    {% for alert in alerts %}
+      <article class="alert-card level-{{ alert.level|lower }}">
+        <div><b>{{ alert.title }}</b><span>{{ alert.point.name }}</span></div>
+        <p>{{ alert.message }}</p>
+        <div class="card-actions">
+          {% if alert.inventory_id %}<a href="{% url 'inventory_detail' alert.inventory_id %}">Ver inventario</a>{% endif %}
+          <a href="{% url 'alert_resolve' alert.pk %}">Atender</a>
+        </div>
+      </article>
+    {% empty %}<div class="empty">No hay alertas pendientes.</div>{% endfor %}
+  </section>
+</div>
+{% endblock %}

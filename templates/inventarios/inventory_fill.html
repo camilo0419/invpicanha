@@ -1,1 +1,64 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>{{ inv.get_inventory_type_display }}</h1><p>{{ inv.inventory_date|date:'d/m/Y' }} · {{ inv.point_name }}</p></div><div class="progress-box"><b>{{ inv.total_counted }}/{{ inv.total_expected }}</b><span>diligenciados</span></div></div><form method="post" id="inventory-form">{% csrf_token %}<div class="sticky-actions"><button name="action" value="save" class="btn">Guardar borrador</button><button name="action" value="finalize" class="btn primary" onclick="return confirm('¿Finalizar y bloquear este inventario?')">Finalizar inventario</button></div><div class="product-grid">{% for item in items %}<article class="product-row result-{{ item.result|lower }}"><div class="product-info"><b>{{ item.product_name }}</b><span>{{ item.category }} · {{ item.unit }}</span><small>Crítico ≤ {{ item.critical_applied|default:'—' }} · Mínimo {{ item.minimum_applied|default:'—' }} · Máximo {{ item.maximum_applied|default:'—' }}</small></div><div><label>Cantidad</label><input inputmode="decimal" name="qty_{{ item.id }}" value="{% if item.quantity != None %}{{ item.quantity }}{% endif %}" placeholder="0" required></div><div><label>Observación</label><input name="obs_{{ item.id }}" value="{{ item.observation }}" placeholder="Novedad o explicación"></div></article>{% endfor %}</div><label>Observación general</label><textarea name="general_observation" rows="3">{{ inv.general_observation }}</textarea></form>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Captura · {{ inv.get_inventory_type_display }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">{{ inv.point.name }}</span>
+    <h1>{{ inv.get_inventory_type_display }}</h1>
+    <p>{{ inv.inventory_date|date:"d/m/Y" }} · Los campos vacíos no cuentan; cero sí es una cantidad válida.</p>
+  </div>
+  <div class="progress-box" aria-live="polite">
+    <b id="progress-count">{{ inv.total_counted }}/{{ inv.total_expected }}</b>
+    <span>diligenciados</span>
+    <progress id="progress-bar" max="{{ inv.total_expected }}" value="{{ inv.total_counted }}"></progress>
+  </div>
+</div>
+
+<div class="capture-tools">
+  <label class="search-field"><span class="sr-only">Buscar producto</span><input id="product-search" type="search" placeholder="Buscar producto o código"></label>
+  <label><span class="sr-only">Filtrar categoría</span>
+    <select id="category-filter"><option value="">Todas las categorías</option>{% for category in categories %}<option>{{ category }}</option>{% endfor %}</select>
+  </label>
+</div>
+
+<form method="post" id="inventory-form" novalidate>
+  {% csrf_token %}
+  <div class="sticky-actions">
+    <a class="btn ghost" href="{% url 'dashboard' %}">Salir</a>
+    <button name="action" value="save" class="btn" type="submit">Guardar borrador</button>
+    <button name="action" value="finalize" class="btn primary js-finalize" type="submit">Finalizar inventario</button>
+  </div>
+  <div class="product-grid">
+    {% regroup items by category as category_list %}
+    {% for group in category_list %}
+      <h2 class="category-title">{{ group.grouper|default:"Sin categoría" }}</h2>
+      {% for item in group.list %}
+      <article class="product-row result-{{ item.result|lower }}" data-product="{{ item.product_name|lower }} {{ item.product_code|lower }}" data-category="{{ item.category|default:'Sin categoría' }}">
+        <div class="product-info">
+          <small>{{ item.product_code }}</small>
+          <b>{{ item.product_name }}</b>
+          <span>{{ item.category|default:"Sin categoría" }} · {{ item.unit }}</span>
+          <small>Crítico ≤ {{ item.critical_applied|default_if_none:"—" }} · Mínimo {{ item.minimum_applied|default_if_none:"—" }} · Máximo {{ item.maximum_applied|default_if_none:"—" }}</small>
+          <span class="result {{ item.result|lower }}">{{ item.get_result_display }}</span>
+        </div>
+        <div class="quantity-field">
+          <label for="qty-{{ item.id }}">Cantidad</label>
+          <div class="input-unit">
+            <input id="qty-{{ item.id }}" class="quantity-input" inputmode="{% if item.product.allows_decimals %}decimal{% else %}numeric{% endif %}" name="qty_{{ item.id }}" value="{% if item.quantity != None %}{{ item.quantity }}{% endif %}" placeholder="Vacío" autocomplete="off">
+            <span>{{ item.unit }}</span>
+          </div>
+        </div>
+        <div>
+          <label for="obs-{{ item.id }}">Observación</label>
+          <input id="obs-{{ item.id }}" name="obs_{{ item.id }}" value="{{ item.observation }}" placeholder="Novedad o explicación">
+        </div>
+      </article>
+      {% endfor %}
+    {% empty %}<div class="empty">No hay productos activos configurados para este inventario.</div>{% endfor %}
+  </div>
+  <div class="form-card">
+    <label for="general-observation">Observación general</label>
+    <textarea id="general-observation" name="general_observation" rows="3" placeholder="Comentario general opcional">{{ inv.general_observation }}</textarea>
+  </div>
+</form>
+{% endblock %}

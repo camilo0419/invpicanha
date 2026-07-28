@@ -1,1 +1,19 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>{% if obj %}Editar{% else %}Nuevo{% endif %} producto</h1><p>Define inclusión y umbrales de alerta.</p></div></div><form method="post" class="form-card">{% csrf_token %}{{ form.non_field_errors }}<div class="form-grid">{% for field in form %}<div class="field {% if field.field.widget.input_type == 'checkbox' %}check{% endif %}">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>{% endfor %}</div><button class="btn primary">Guardar</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block title %}{% if obj %}Editar{% else %}Nuevo{% endif %} producto{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Catálogo</span><h1>{% if obj %}Editar {{ obj.name }}{% else %}Nuevo producto{% endif %}</h1><p>Los cambios aplican únicamente a inventarios nuevos.</p></div></div>
+<form method="post" class="form-card" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="form-grid">
+    {% for field in form %}
+    <div class="field {% if field.field.widget.input_type == 'checkbox' %}check{% endif %}">
+      {{ field.label_tag }}{{ field }}
+      {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+      {% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="form-actions"><a class="btn ghost" href="{% url 'products' %}">Cancelar</a><button class="btn primary" type="submit">Guardar producto</button></div>
+</form>
+{% endblock %}

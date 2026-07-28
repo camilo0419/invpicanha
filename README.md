@@ -1,42 +1,60 @@
-# Inventarios Picanha Parrilla
+# Picanha Inventarios
 
-Aplicación Django + SQLite responsive para inventario diario y general, historial auditable, criterios administrables y alertas web.
+Aplicación Django + SQLite para el control responsive de inventarios diarios y generales de Picanha Parrilla.
 
-## Inicio rápido en Windows
+## Instalación local en Windows
 
-1. Instala Python 3.12 o 3.13 y marca **Add Python to PATH**.
-2. Descomprime el proyecto.
-3. Haz doble clic en `setup_windows.bat`.
-4. Abre `http://127.0.0.1:8000/`.
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py seed_initial_data
+python manage.py test
+python manage.py runserver
+```
 
-Después de la primera instalación usa `run_windows.bat`.
+Abre `http://127.0.0.1:8000/`.
 
 ## Usuarios iniciales
 
-- Punto de venta: `lacentral@picanhaparrilla.com` / `PicanhaCentral2026!`
-- Administrador: `contacto@picanhaparrilla.com` / `PicanhaAdmin2026!`
+| Rol | Usuario | Contraseña inicial |
+| --- | --- | --- |
+| Punto de venta · La Central | `lacentral@picanhaparrilla.com` | `PicanhaCentral2026!` |
+| Administrador funcional | `contacto@picanhaparrilla.com` | `PicanhaAdmin2026!` |
 
-Cambia las contraseñas antes de producción con:
+Ninguno de estos usuarios es `staff` ni `superuser`. Cambia las contraseñas antes de un uso real:
 
-```bash
+```powershell
 python manage.py changepassword lacentral@picanhaparrilla.com
 python manage.py changepassword contacto@picanhaparrilla.com
 ```
 
-## Funcionalidad incluida
+## Datos iniciales
 
-- Roles propios: administrador y punto de venta. Ninguno es superusuario.
-- Dos botones: inventario diario e inventario general.
-- Guardado en borrador y finalización con bloqueo lógico.
-- Un inventario por tipo, fecha y punto.
-- Productos configurables para diario/general.
-- Umbrales crítico, mínimo y máximo administrables.
-- Observación obligatoria en productos con alerta (configurable).
-- Alertas web y bandeja de atención para administrador.
-- Historial desplazable, filtros y detalle producto por producto.
-- Diseño responsive para móvil y escritorio.
-- SQLite sin servicios externos.
+El comando `seed_initial_data` es idempotente: crea o actualiza el punto `CENTRAL`, los dos usuarios funcionales, su perfil y un catálogo de ejemplo sin duplicar registros.
 
-## Nota para producción
+## Funcionalidad
 
-Para publicar en internet cambia `DJANGO_SECRET_KEY`, desactiva `DJANGO_DEBUG`, configura `DJANGO_ALLOWED_HOSTS`, usa HTTPS y un servidor WSGI. SQLite es apropiado para este uso pequeño con baja concurrencia; realiza copias de seguridad periódicas de `db.sqlite3`.
+- Roles funcionales con permisos verificados en backend.
+- Inventarios diarios y generales con snapshots históricos de producto y reglas.
+- Guardado de borradores, validación, finalización transaccional y bloqueo.
+- Clasificación centralizada: crítico, bajo, normal, alto, sin regla y no contado.
+- Reapertura y anulación administrativas sin eliminar históricos.
+- Alertas internas por producto, atención con comentario y trazabilidad.
+- CRUD de productos, configuración operativa y bitácora de auditoría.
+- Protección CSRF, acciones sensibles por POST e IDOR restringido por punto de venta.
+- Interfaz responsive para teléfono, tableta y computador.
+
+## Configuración para producción
+
+El proyecto queda preparado para pruebas locales, no para exposición directa a Internet. Antes de desplegar:
+
+- define una `DJANGO_SECRET_KEY` larga y aleatoria;
+- usa `DJANGO_DEBUG=0`;
+- configura `DJANGO_ALLOWED_HOSTS`;
+- habilita HTTPS, cookies seguras, redirección SSL y HSTS;
+- sirve la aplicación con un servidor WSGI/ASGI;
+- establece copias de seguridad de `db.sqlite3`;
+- considera PostgreSQL si aumenta la concurrencia de escritura.

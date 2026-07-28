@@ -1,16 +1,84 @@
 from django import forms
-from .models import Product, AppSetting, Alert
-class ProductForm(forms.ModelForm):
+
+from .models import Alert, AppSetting, PointOfSale, Product
+
+
+class StyledModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if not isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.setdefault("class", "input")
+
+
+class ProductForm(StyledModelForm):
     class Meta:
-        model=Product; fields=['code','name','category','unit','active','include_daily','include_general','allows_decimals','critical_qty','minimum_qty','maximum_qty','display_order']
-        widgets={k:forms.TextInput(attrs={'class':'input'}) for k in ['code','name','category','unit']}
-    def clean(self):
-        d=super().clean(); c,m,x=d.get('critical_qty'),d.get('minimum_qty'),d.get('maximum_qty')
-        if c is not None and m is not None and c>m: self.add_error('critical_qty','Debe ser menor o igual al mínimo.')
-        if m is not None and x is not None and m>x: self.add_error('maximum_qty','Debe ser mayor o igual al mínimo.')
-        return d
-class SettingForm(forms.ModelForm):
+        model = Product
+        fields = [
+            "code",
+            "name",
+            "category",
+            "unit",
+            "active",
+            "display_order",
+            "allows_decimals",
+            "include_daily",
+            "include_general",
+            "critical_qty",
+            "minimum_qty",
+            "maximum_qty",
+            "require_observation_low",
+            "require_observation_high",
+        ]
+        widgets = {
+            "critical_qty": forms.NumberInput(attrs={"min": 0, "step": "0.01"}),
+            "minimum_qty": forms.NumberInput(attrs={"min": 0, "step": "0.01"}),
+            "maximum_qty": forms.NumberInput(attrs={"min": 0, "step": "0.01"}),
+        }
+
+
+class PointOfSaleForm(StyledModelForm):
     class Meta:
-        model=AppSetting; fields=['daily_deadline','general_frequency_days','general_deadline','require_observation_on_alert']; widgets={'daily_deadline':forms.TimeInput(attrs={'type':'time'}),'general_deadline':forms.TimeInput(attrs={'type':'time'})}
-class AlertResolveForm(forms.ModelForm):
-    class Meta: model=Alert; fields=['resolution_note']; widgets={'resolution_note':forms.Textarea(attrs={'rows':3})}
+        model = PointOfSale
+        fields = [
+            "name",
+            "code",
+            "active",
+            "daily_deadline",
+            "general_deadline",
+            "general_frequency",
+        ]
+        widgets = {
+            "daily_deadline": forms.TimeInput(attrs={"type": "time"}),
+            "general_deadline": forms.TimeInput(attrs={"type": "time"}),
+        }
+
+
+class SettingForm(StyledModelForm):
+    class Meta:
+        model = AppSetting
+        fields = ["require_observation_on_alert", "generate_product_alerts"]
+
+
+class AlertResolveForm(StyledModelForm):
+    class Meta:
+        model = Alert
+        fields = ["attendance_comment"]
+        widgets = {
+            "attendance_comment": forms.Textarea(
+                attrs={"rows": 4, "required": True, "placeholder": "Describe la atención realizada"}
+            )
+        }
+
+    def clean_attendance_comment(self):
+        comment = self.cleaned_data["attendance_comment"].strip()
+        if not comment:
+            raise forms.ValidationError("El comentario de atención es obligatorio.")
+        return comment
+
+
+class CancellationForm(forms.Form):
+    reason = forms.CharField(
+        label="Motivo de anulación",
+        widget=forms.Textarea(attrs={"rows": 4, "placeholder": "Indica el motivo"}),
+    )

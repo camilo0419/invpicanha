@@ -1,1 +1,33 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Alertas</h1><p>Novedades generadas por los criterios administrados.</p></div></div><div class="filter-chips"><a href="?">Todas</a><a href="?status=open">Abiertas</a><a href="?status=resolved">Atendidas</a></div>{% for a in alerts %}<article class="alert-card {{ a.level|lower }}"><b>{{ a.title }}</b><span>{{ a.message }}</span><small>{{ a.created_at|date:'d/m/Y H:i' }} · {% if a.resolved %}Atendida{% else %}Pendiente{% endif %}</small>{% if not a.resolved %}<a href="{% url 'alert_resolve' a.pk %}">Atender alerta</a>{% endif %}</article>{% empty %}<div class="empty">No hay alertas.</div>{% endfor %}{% endblock %}
+{% extends "base.html" %}
+{% block title %}Bandeja de alertas{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Seguimiento</span><h1>Bandeja de alertas</h1><p>Consulta reglas aplicadas y documenta la atención administrativa.</p></div></div>
+<form class="filters wide">
+  <label>Desde<input type="date" name="date_from" value="{{ request.GET.date_from }}"></label>
+  <label>Hasta<input type="date" name="date_to" value="{{ request.GET.date_to }}"></label>
+  <label>Severidad<select name="level"><option value="">Todas</option>{% for value,label in levels %}<option value="{{ value }}" {% if request.GET.level == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Tipo<select name="type"><option value="">Todos</option>{% for value,label in types %}<option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Estado<select name="state"><option value="">Todos</option><option value="PENDIENTE" {% if request.GET.state == "PENDIENTE" %}selected{% endif %}>Pendiente</option><option value="ATENDIDA" {% if request.GET.state == "ATENDIDA" %}selected{% endif %}>Atendida</option></select></label>
+  <label>Producto<input name="product" value="{{ request.GET.product }}" placeholder="Nombre"></label>
+  <label>Inventario<input type="number" min="1" name="inventory" value="{{ request.GET.inventory }}" placeholder="ID"></label>
+  <button class="btn primary" type="submit">Filtrar</button>
+</form>
+<div class="alert-list">
+{% for alert in alerts %}
+  <article class="alert-card level-{{ alert.level|lower }}">
+    <div class="alert-heading"><div><span class="eyebrow">{{ alert.get_level_display }} · {{ alert.point.name }}</span><h2>{{ alert.title }}</h2></div><i class="status {% if alert.attended %}finalizado{% else %}borrador{% endif %}">{{ alert.get_state_display }}</i></div>
+    <p>{{ alert.message }}</p>
+    <div class="alert-meta">
+      <span>{{ alert.created_at|date:"d/m/Y H:i" }}</span>
+      <span>{{ alert.inventory.get_inventory_type_display }} #{{ alert.inventory_id }}</span>
+      {% if alert.item %}<span>{{ alert.item.quantity }} {{ alert.item.unit }}</span>{% endif %}
+      <span>Responsable: {{ alert.inventory.responsible.username }}</span>
+    </div>
+    {% if alert.attended %}
+      <div class="resolution"><b>Atendida por {{ alert.attended_by.username }}</b><span>{{ alert.attended_at|date:"d/m/Y H:i" }} · {{ alert.attendance_comment }}</span></div>
+    {% endif %}
+    <div class="card-actions"><a href="{% url 'inventory_detail' alert.inventory_id %}">Abrir inventario</a>{% if not alert.attended %}<a href="{% url 'alert_resolve' alert.pk %}">Atender alerta</a>{% endif %}</div>
+  </article>
+{% empty %}<div class="empty">No hay alertas para estos filtros.</div>{% endfor %}
+</div>
+{% endblock %}

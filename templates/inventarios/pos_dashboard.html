@@ -1,1 +1,52 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Inventario de La Central</h1><p>Selecciona el tipo de conteo que vas a realizar.</p></div></div><div class="action-grid"><a class="action-card red" href="{% url 'inventory_start' 'diario' %}"><span>⚡</span><h2>Inventario diario</h2><p>Productos críticos y de alta rotación.</p></a><a class="action-card dark" href="{% url 'inventory_start' 'general' %}"><span>▦</span><h2>Inventario general</h2><p>Conteo completo de productos activos.</p></a></div><h2>Actividad reciente</h2>{% include 'inventarios/_inventory_cards.html' with inventories=recent %}{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ point.name }} | Inventarios{% endblock %}
+{% block content %}
+<div class="hero">
+  <div>
+    <span class="eyebrow">Punto de venta</span>
+    <h1>{{ point.name }}</h1>
+    <p>{{ today|date:"l, d \d\e F \d\e Y" }} · {{ user.username }}</p>
+  </div>
+  <img src="{% static 'img/logo.png' %}" alt="" class="hero-logo">
+</div>
+
+<div class="action-grid">
+  <form method="post" action="{% url 'inventory_start' 'diario' %}" class="action-form">
+    {% csrf_token %}
+    <button class="action-card red" type="submit">
+      <span class="action-icon">01</span><strong>Inventario diario</strong>
+      <small>{% if daily_today %}{{ daily_today.get_state_display }}{% else %}Iniciar conteo de hoy{% endif %}</small>
+    </button>
+  </form>
+  <form method="post" action="{% url 'inventory_start' 'general' %}" class="action-form">
+    {% csrf_token %}
+    <button class="action-card dark" type="submit">
+      <span class="action-icon">02</span><strong>Inventario general</strong>
+      <small>{% if latest_general %}Último: {{ latest_general.inventory_date|date:"d/m/Y" }}{% else %}Iniciar conteo completo{% endif %}</small>
+    </button>
+  </form>
+</div>
+
+{% if drafts %}
+<section>
+  <div class="section-head"><h2>Borradores pendientes</h2><span>{{ drafts|length }}</span></div>
+  {% include "inventarios/_inventory_cards.html" with inventories=drafts %}
+</section>
+{% endif %}
+
+<div class="two-col">
+  <section>
+    <div class="section-head"><h2>Últimos inventarios</h2><a href="{% url 'inventory_list' %}">Ver historial</a></div>
+    {% include "inventarios/_inventory_cards.html" with inventories=recent %}
+  </section>
+  <section>
+    <div class="section-head"><h2>Novedades relacionadas</h2><span>Solo lectura</span></div>
+    {% for alert in related_alerts %}
+      <a class="alert-card level-{{ alert.level|lower }}" href="{% url 'inventory_detail' alert.inventory_id %}">
+        <b>{{ alert.title }}</b><span>{{ alert.created_at|date:"d/m/Y H:i" }}</span>
+      </a>
+    {% empty %}<div class="empty">No hay novedades recientes.</div>{% endfor %}
+  </section>
+</div>
+{% endblock %}

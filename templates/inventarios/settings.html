@@ -1,1 +1,17 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Configuración</h1><p>Horarios y reglas generales del proceso.</p></div></div><form method="post" class="form-card">{% csrf_token %}{{ form.as_p }}<button class="btn primary">Guardar configuración</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Configuración operativa{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Administración</span><h1>Configuración operativa</h1><p>Horarios, frecuencia y comportamiento de alertas almacenados en la base de datos.</p></div></div>
+<form method="post" class="settings-grid" novalidate>
+  {% csrf_token %}
+  <section class="form-card">
+    <h2>Punto de venta</h2>
+    {% for field in point_form %}<div class="field {% if field.field.widget.input_type == 'checkbox' %}check{% endif %}">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+  </section>
+  <section class="form-card">
+    <h2>Alertas y observaciones</h2>
+    {% for field in settings_form %}<div class="field check">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<small class="field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+  </section>
+  <div class="form-actions full-span"><button class="btn primary" type="submit">Guardar configuración</button></div>
+</form>
+{% endblock %}

@@ -1,1 +1,13 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Atender alerta</h1><p>{{ alert.title }}</p></div></div><div class="note">{{ alert.message }}</div><form method="post" class="form-card">{% csrf_token %}{{ form.as_p }}<button class="btn primary">Marcar como atendida</button></form>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Atender alerta{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <a class="back-link" href="{% url 'alerts' %}">← Volver a alertas</a>
+  <div class="form-card">
+    <span class="eyebrow">{{ alert.get_level_display }}</span>
+    <h1>Atender alerta</h1><h2>{{ alert.title }}</h2>
+    <p>{{ alert.message }}</p>
+    <form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn primary full" type="submit">Marcar como atendida</button></form>
+  </div>
+</div>
+{% endblock %}

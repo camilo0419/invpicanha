@@ -1,3 +1,48 @@
-{% load static %}<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{% block title %}Inventarios Picanha{% endblock %}</title><link rel="stylesheet" href="{% static 'css/app.css' %}"></head><body>
-<header class="topbar"><a class="brand" href="{% url 'dashboard' %}"><img src="{% static 'img/logo.png' %}" alt="Picanha Parrilla"><span>Inventarios</span></a>{% if user.is_authenticated %}<button class="menu-btn" onclick="document.body.classList.toggle('menu-open')">☰</button><nav><a href="{% url 'dashboard' %}">Inicio</a><a href="{% url 'inventory_list' %}">Historial</a>{% if user.profile.role == 'ADMIN' %}<a href="{% url 'products' %}">Productos</a><a href="{% url 'alerts' %}">Alertas{% if open_alert_count %}<b class="badge">{{ open_alert_count }}</b>{% endif %}</a><a href="{% url 'settings' %}">Configuración</a>{% endif %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link-btn">Salir</button></form></nav>{% endif %}</header>
-<main class="container">{% if missing_daily_now %}<div class="alert danger"><strong>Inventario diario pendiente:</strong> no hay un inventario diario finalizado hoy y ya pasó la hora límite.</div>{% endif %}{% for message in messages %}<div class="alert {{ message.tags }}">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main><script src="{% static 'js/app.js' %}"></script></body></html>
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b0d">
+  <title>{% block title %}Inventarios | Picanha Parrilla{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% if not user.is_authenticated %}auth-page{% endif %}">
+  <header class="topbar">
+    <a class="brand" href="{% url 'dashboard' %}" aria-label="Ir al inicio">
+      <img src="{% static 'img/logo.png' %}" alt="Picanha Parrilla">
+      <span>Inventarios</span>
+    </a>
+    {% if user.is_authenticated %}
+      <button class="menu-btn" type="button" aria-expanded="false" aria-controls="main-nav">
+        <span aria-hidden="true">☰</span><span class="sr-only">Abrir menú</span>
+      </button>
+      <nav id="main-nav" aria-label="Navegación principal">
+        <a href="{% url 'dashboard' %}">Inicio</a>
+        <a href="{% url 'inventory_list' %}">Inventarios</a>
+        {% if functional_profile.role == 'ADMIN' %}
+          <a href="{% url 'products' %}">Productos</a>
+          <a href="{% url 'alerts' %}">Alertas{% if open_alert_count %}<b class="badge">{{ open_alert_count }}</b>{% endif %}</a>
+          <a href="{% url 'audit' %}">Auditoría</a>
+          <a href="{% url 'settings' %}">Configuración</a>
+        {% endif %}
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="link-btn" type="submit">Cerrar sesión</button>
+        </form>
+      </nav>
+    {% endif %}
+  </header>
+  <main class="container">
+    {% for message in messages %}
+      <div class="alert {{ message.tags }}" role="alert">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{% static 'js/app.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,1 +1,27 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Productos y criterios</h1><p>Administra qué aparece en cada inventario y sus niveles de alerta.</p></div><a class="btn primary" href="{% url 'product_create' %}">Nuevo producto</a></div><form class="filters"><input name="q" value="{{ q }}" placeholder="Código, producto o categoría"><button class="btn">Buscar</button></form><div class="detail-table"><div class="tr header"><span>Producto</span><span>Inventarios</span><span>Reglas</span><span></span></div>{% for p in products %}<div class="tr"><span><b>{{ p.name }}</b><small>{{ p.code }} · {{ p.category }} · {{ p.unit }}</small></span><span>{% if p.include_daily %}Diario {% endif %}{% if p.include_general %}General{% endif %}</span><span>C: {{ p.critical_qty|default:'—' }} · M: {{ p.minimum_qty|default:'—' }} · Máx: {{ p.maximum_qty|default:'—' }}</span><span><a href="{% url 'product_edit' p.pk %}">Editar</a></span></div>{% empty %}<div class="empty">No hay productos.</div>{% endfor %}</div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Productos{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><span class="eyebrow">Catálogo</span><h1>Productos y reglas</h1><p>Administra inclusión, unidades y umbrales sin alterar los históricos.</p></div>
+  <a class="btn primary" href="{% url 'product_create' %}">Nuevo producto</a>
+</div>
+<form class="filters products-filter">
+  <input name="q" value="{{ q }}" placeholder="Código, producto o categoría">
+  <select name="status"><option value="">Activos e inactivos</option><option value="active" {% if request.GET.status == "active" %}selected{% endif %}>Activos</option><option value="inactive" {% if request.GET.status == "inactive" %}selected{% endif %}>Inactivos</option></select>
+  <select name="inventory"><option value="">Todos los inventarios</option><option value="daily" {% if request.GET.inventory == "daily" %}selected{% endif %}>Diario</option><option value="general" {% if request.GET.inventory == "general" %}selected{% endif %}>General</option></select>
+  <select name="order"><option value="display_order">Orden visual</option><option value="name">Nombre</option><option value="code">Código</option><option value="category">Categoría</option><option value="-updated_at">Más recientes</option></select>
+  <button class="btn" type="submit">Filtrar</button>
+</form>
+<div class="detail-table products-table">
+  <div class="tr header"><span>Producto</span><span>Inventarios</span><span>Reglas</span><span>Estado</span><span>Acciones</span></div>
+  {% for product in products %}
+  <div class="tr">
+    <span data-label="Producto"><b>{{ product.name }}</b><small>{{ product.code }} · {{ product.category }} · {{ product.unit }}</small></span>
+    <span data-label="Inventarios">{% if product.include_daily %}<i class="tag">Diario</i>{% endif %}{% if product.include_general %}<i class="tag">General</i>{% endif %}</span>
+    <span data-label="Reglas"><small>C: {{ product.critical_qty|default_if_none:"—" }} · Mín: {{ product.minimum_qty|default_if_none:"—" }} · Máx: {{ product.maximum_qty|default_if_none:"—" }}</small></span>
+    <span data-label="Estado"><i class="status {% if product.active %}finalizado{% else %}anulado{% endif %}">{% if product.active %}Activo{% else %}Inactivo{% endif %}</i></span>
+    <span class="row-actions" data-label="Acciones"><a href="{% url 'product_edit' product.pk %}">Editar</a><form method="post" action="{% url 'product_toggle' product.pk %}">{% csrf_token %}<button class="text-button" type="submit">{% if product.active %}Desactivar{% else %}Activar{% endif %}</button></form></span>
+  </div>
+  {% empty %}<div class="empty">No hay productos para estos filtros.</div>{% endfor %}
+</div>
+{% endblock %}

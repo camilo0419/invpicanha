@@ -1,1 +1,17 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>Historial de inventarios</h1><p>Selecciona un registro para revisar el detalle.</p></div></div><form class="filters"><input name="q" value="{{ request.GET.q }}" placeholder="Buscar punto o responsable"><select name="type"><option value="">Todos los tipos</option><option value="DAILY">Diario</option><option value="GENERAL">General</option></select><select name="state"><option value="">Todos los estados</option><option value="DRAFT">Borrador</option><option value="FINAL">Finalizado</option><option value="FINAL_ALERT">Con alertas</option></select><button class="btn">Filtrar</button></form>{% include 'inventarios/_inventory_cards.html' with inventories=page.object_list %}<div class="pagination">{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Anterior</a>{% endif %}<span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?page={{ page.next_page_number }}">Siguiente</a>{% endif %}</div>{% endblock %}
+{% extends "base.html" %}
+{% block title %}Historial de inventarios{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Consulta</span><h1>Historial de inventarios</h1><p>Filtra y abre cualquier registro disponible para tu rol.</p></div></div>
+<form class="filters wide" method="get">
+  <label>Desde<input type="date" name="date_from" value="{{ request.GET.date_from }}"></label>
+  <label>Hasta<input type="date" name="date_to" value="{{ request.GET.date_to }}"></label>
+  <label>Tipo<select name="type"><option value="">Todos</option>{% for value,label in types %}<option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Estado<select name="state"><option value="">Todos</option>{% for value,label in states %}<option value="{{ value }}" {% if request.GET.state == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Responsable<input name="responsible" value="{{ request.GET.responsible }}" placeholder="Correo"></label>
+  <label>Alertas<select name="alerts"><option value="">Todas</option><option value="yes" {% if request.GET.alerts == "yes" %}selected{% endif %}>Con alertas</option><option value="no" {% if request.GET.alerts == "no" %}selected{% endif %}>Sin alertas</option></select></label>
+  <button class="btn primary" type="submit">Aplicar filtros</button>
+  <a class="btn ghost" href="{% url 'inventory_list' %}">Limpiar</a>
+</form>
+{% include "inventarios/_inventory_cards.html" with inventories=page.object_list %}
+{% include "inventarios/_pagination.html" with page=page %}
+{% endblock %}

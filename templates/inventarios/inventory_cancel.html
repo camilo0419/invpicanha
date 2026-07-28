@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Anular inventario{% endblock %}
+{% block content %}
+<div class="narrow-page">
+  <a class="back-link" href="{% url 'inventory_detail' inv.pk %}">← Volver al inventario</a>
+  <div class="form-card danger-zone">
+    <span class="eyebrow">Acción administrativa</span>
+    <h1>Anular inventario</h1>
+    <p>El registro no se eliminará. Quedará bloqueado y conservará toda su trazabilidad.</p>
+    <form method="post">
+      {% csrf_token %}{{ form.as_p }}
+      <button class="btn danger full" type="submit">Confirmar anulación</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

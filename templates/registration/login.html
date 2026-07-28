@@ -1,4 +1,37 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Iniciar sesión{% endblock %}
+{% block title %}Iniciar sesión | Picanha Parrilla{% endblock %}
+
+{% block content %}
+<section class="login-shell" aria-labelledby="login-title">
+  <div class="login-brand">
+    <img src="{% static 'img/logo.png' %}" alt="Picanha Parrilla">
+    <p>Control diario, decisiones claras.</p>
+  </div>
+  <div class="login-card">
+    <span class="eyebrow">Acceso interno</span>
+    <h1 id="login-title">Control de inventarios</h1>
+    <p class="muted">Ingresa con el usuario asignado a tu operación.</p>
+    <form method="post" action="{% url 'login' %}" novalidate>
+      {% csrf_token %}
+      {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+      {% if form.non_field_errors %}
+        <div class="alert error">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="field">
+        <label for="{{ form.username.id_for_label }}">Correo electrónico</label>
+        {{ form.username }}
+        {% for error in form.username.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      <div class="field">
+        <label for="{{ form.password.id_for_label }}">Contraseña</label>
+        {{ form.password }}
+        {% for error in form.password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+      </div>
+      <button type="submit" class="btn primary full">Ingresar</button>
+    </form>
+    <small class="security-note">Acceso exclusivo para personal autorizado de Picanha Parrilla.</small>
+  </div>
+</section>
+{% endblock %}

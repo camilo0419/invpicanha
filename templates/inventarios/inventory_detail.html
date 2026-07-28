@@ -1,1 +1,62 @@
-{% extends 'base.html' %}{% block content %}<div class="page-head"><div><h1>{{ inv.get_inventory_type_display }}</h1><p>{{ inv.inventory_date|date:'d/m/Y' }} · {{ inv.point_name }} · {{ inv.created_by.username }}</p></div><span class="status {{ inv.state|lower }}">{{ inv.get_state_display }}</span></div><div class="kpis"><div><b>{{ inv.total_expected }}</b><span>Esperados</span></div><div><b>{{ inv.total_critical }}</b><span>Críticos</span></div><div><b>{{ inv.total_low }}</b><span>Bajos</span></div><div><b>{{ inv.total_high }}</b><span>Altos</span></div></div><div class="filter-chips"><a href="?">Todos</a><a href="?result=CRITICAL">Críticos</a><a href="?result=LOW">Bajos</a><a href="?result=HIGH">Altos</a><a href="?result=NORMAL">Normales</a></div><div class="detail-table"><div class="tr header"><span>Producto</span><span>Cantidad</span><span>Resultado</span><span>Observación</span></div>{% for item in items %}<div class="tr"><span><b>{{ item.product_name }}</b><small>{{ item.category }} · {{ item.unit }}</small></span><span>{{ item.quantity|default:'—' }}</span><span class="result {{ item.result|lower }}">{{ item.get_result_display }}</span><span>{{ item.observation|default:'—' }}</span></div>{% empty %}<div class="empty">No hay resultados para este filtro.</div>{% endfor %}</div>{% if inv.general_observation %}<div class="note"><b>Observación general</b><p>{{ inv.general_observation }}</p></div>{% endif %}{% endblock %}
+{% extends "base.html" %}
+{% block title %}Detalle de inventario{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <span class="eyebrow">{{ inv.point.name }}</span>
+    <h1>{{ inv.get_inventory_type_display }}</h1>
+    <p>{{ inv.inventory_date|date:"d/m/Y" }} · Responsable: {{ inv.responsible.username }}</p>
+  </div>
+  <span class="status {{ inv.state|lower }}">{{ inv.get_state_display }}</span>
+</div>
+
+<section class="kpis compact">
+  <div><b>{{ inv.total_counted }}/{{ inv.total_expected }}</b><span>Contados</span></div>
+  <div><b>{{ inv.total_critical }}</b><span>Críticos</span></div>
+  <div><b>{{ inv.total_low }}</b><span>Bajos</span></div>
+  <div><b>{{ inv.total_high }}</b><span>Altos</span></div>
+</section>
+
+{% if functional_profile.role == "ADMIN" and inv.state != "ANULADO" %}
+<div class="admin-actions">
+  {% if inv.is_final %}
+  <form method="post" action="{% url 'inventory_reopen' inv.pk %}" data-confirm="¿Reabrir este inventario finalizado?">
+    {% csrf_token %}<button class="btn" type="submit">Reabrir inventario</button>
+  </form>
+  {% elif inv.can_edit %}
+    <a class="btn" href="{% url 'inventory_fill' inv.pk %}">Editar inventario</a>
+  {% endif %}
+  <a class="btn danger" href="{% url 'inventory_cancel' inv.pk %}">Anular inventario</a>
+</div>
+{% elif functional_profile.role == "PUNTO_VENTA" and inv.can_edit and inv.state != "REABIERTO" %}
+<a class="btn primary" href="{% url 'inventory_fill' inv.pk %}">Continuar borrador</a>
+{% endif %}
+
+<div class="filter-chips">
+  <a href="?">Todos</a><a href="?result=CRITICO">Críticos</a><a href="?result=BAJO">Bajos</a>
+  <a href="?result=ALTO">Altos</a><a href="?result=NORMAL">Normales</a><a href="?result=SIN_REGLA">Sin regla</a>
+</div>
+<div class="detail-table inventory-detail">
+  <div class="tr header"><span>Producto</span><span>Cantidad</span><span>Resultado</span><span>Reglas aplicadas</span><span>Registro</span></div>
+  {% for item in items %}
+  <div class="tr">
+    <span data-label="Producto"><b>{{ item.product_name }}</b><small>{{ item.product_code }} · {{ item.category }} · {{ item.unit }}</small></span>
+    <span data-label="Cantidad">{{ item.quantity|default_if_none:"—" }} {{ item.unit }}</span>
+    <span data-label="Resultado"><i class="result {{ item.result|lower }}">{{ item.get_result_display }}</i></span>
+    <span data-label="Reglas"><small>C: {{ item.critical_applied|default_if_none:"—" }} · Mín: {{ item.minimum_applied|default_if_none:"—" }} · Máx: {{ item.maximum_applied|default_if_none:"—" }}</small></span>
+    <span data-label="Registro"><small>{{ item.observation|default:"Sin observación" }}<br>{% if item.registered_by %}{{ item.registered_by.username }} · {{ item.registered_at|date:"d/m/Y H:i" }}{% endif %}</small></span>
+  </div>
+  {% empty %}<div class="empty">No hay resultados para este filtro.</div>{% endfor %}
+</div>
+
+<div class="audit-summary">
+  <h2>Trazabilidad</h2>
+  <dl>
+    <div><dt>Creado</dt><dd>{{ inv.created_by.username }} · {{ inv.created_at|date:"d/m/Y H:i" }}</dd></div>
+    {% if inv.finalized_at %}<div><dt>Finalizado</dt><dd>{{ inv.finalized_at|date:"d/m/Y H:i" }}</dd></div>{% endif %}
+    {% if inv.reopened_at %}<div><dt>Reabierto</dt><dd>{{ inv.reopened_by.username }} · {{ inv.reopened_at|date:"d/m/Y H:i" }}</dd></div>{% endif %}
+    {% if inv.cancelled_at %}<div><dt>Anulado</dt><dd>{{ inv.cancelled_by.username }} · {{ inv.cancelled_at|date:"d/m/Y H:i" }} · {{ inv.cancellation_reason }}</dd></div>{% endif %}
+  </dl>
+</div>
+{% if inv.general_observation %}<div class="note"><b>Observación general</b><p>{{ inv.general_observation }}</p></div>{% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Auditoría{% endblock %}
+{% block content %}
+<div class="page-head"><div><span class="eyebrow">Trazabilidad</span><h1>Bitácora de cambios</h1><p>Acciones funcionales con usuario, fecha, IP y contexto.</p></div></div>
+<form class="filters">
+  <select name="action"><option value="">Todas las acciones</option>{% for value,label in actions %}<option value="{{ value }}" {% if request.GET.action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <input name="user" value="{{ request.GET.user }}" placeholder="Usuario">
+  <input type="date" name="date_from" value="{{ request.GET.date_from }}">
+  <input type="date" name="date_to" value="{{ request.GET.date_to }}">
+  <button class="btn" type="submit">Filtrar</button>
+</form>
+<div class="detail-table audit-table">
+  <div class="tr header"><span>Fecha</span><span>Acción</span><span>Usuario</span><span>Descripción</span><span>Origen</span></div>
+  {% for event in page %}
+  <div class="tr">
+    <span data-label="Fecha">{{ event.created_at|date:"d/m/Y H:i:s" }}</span>
+    <span data-label="Acción"><b>{{ event.get_action_display }}</b><small>{{ event.model }} #{{ event.object_id }}</small></span>
+    <span data-label="Usuario">{{ event.user.username|default:"Sistema" }}</span>
+    <span data-label="Descripción">{{ event.description }}</span>
+    <span data-label="Origen"><small>{{ event.ip|default:"—" }}<br>{{ event.user_agent|truncatechars:70 }}</small></span>
+  </div>
+  {% empty %}<div class="empty">No hay eventos para estos filtros.</div>{% endfor %}
+</div>
+{% include "inventarios/_pagination.html" with page=page %}
+{% endblock %}
